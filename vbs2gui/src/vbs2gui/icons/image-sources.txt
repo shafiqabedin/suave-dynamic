@@ -1,0 +1,4 @@
+goat.png, goatFilled.png
+http://www.iconfinder.com/icondetails/34915/24/goat_icon
+plane.png, planeFilled.png
+http://www.iconfinder.com/icondetails/41930/128/2_air_airport_plane_icon

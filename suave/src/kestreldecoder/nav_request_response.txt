@@ -1,0 +1,50 @@
+Byte Index Type Name Description Units
+6	UINT	GPS Velocity	GPS computed velocity (m/s+10)* 20
+8	UINT	GPS Alt	GPS computed altitude (meters+1000)* 6
+10	UINT	GPS Heading (0->2pi)	GPS computed heading rad*1000
+12	UCHAR	Dev Byte	Take Off countdown timer N/A
+13	UCHAR	Temperature R	Temperature of R Gyro calculated as (deg C +10) * 2.8 (degress C+10) * 2.8
+14	FLOAT	GPS Latitude	Latitude of UAV in decimal degrees deg
+18	INT	Sys flags 1
+
+System Flags 1
+bit Bitmask Description
+0 0x0001 Gimbal Mode0 bit
+1 0x0002 Gimbal Mode 1 bit
+2 0x0004 Empty
+3 0x0008 MSL Alt calibrated
+4 0x0010 Home Alt set
+5 0x0020 Alt over-ride enabled
+6 0x0040 Airspeed over-ride enabled
+7 0x0080 Flair enabled
+8 0x0100 Side look camera selected
+9 0x0200 Empty
+10 0x0400 Empty
+11 0x0800 Empty
+12 0x1000 Empty
+13 0x2000 Empty
+14 0x4000 Empty
+15 0x8000 Empty
+
+20	FLOAT	GPS Longitude	Longitude of UAV in decimal degrees Deg
+24	FLOAT	GPS lat home position	Latitude of Home Position of UAV in Degrees deg
+28	FLOAT	GPS lon home position	Longitude of Home Position of UAV in Degrees deg
+32	UCHAR	Current Command	Current command of flight script (0 =first waypoint) 
+33	UCHAR	Nav State	Navigation state of UAV (Check Appendix A) 
+34	FLOAT	Desired lat	Desired latitude of UAV in Degrees deg
+38	FLOAT	Desired lon	Desired longitude of UAV in Degrees deg
+42	FLOAT	Time (time over target, time left loiter)	Estimated time to target or in the case of a loiter, time remaining (255 = indefinite loiter)	seconds
+46	FLOAT	Distance from Target	Distance from desired UAV target meters
+50	UINT	Heading to Target (0->2*pi)	Heading to desired UAV target rad*1000
+52	UINT	FLC	Feedback loop configuration int
+54	UINT	Wind Heading(from) (0->2*pi)	Estimated wind heading rad*1000
+56	UCHAR	Wind Speed (m/s)	Estimated wind speed (m/s) *6
+57	UINT	User IO pins	(camera, gimbal, etc) - see IO pin state	Used for io pins (camera, gimbal, etc) - see IO pin state bitmask
+59	UCHAR	UTC Year ( 2 digit)	GPS date (YEAR) year
+60	UCHAR	UTC Month (1-12)	GPS date (MONTH) month
+61	UCHAR	UTC Day	GPS date (DAY) daynumber
+62	UCHAR	UTC Hour	GPS time (HOUR) hours
+63	UCHAR	UTC Min	GPS time (MINUTE) minutes
+64	UCHAR	UTC Sec	GPS time (SECOND) seconds
+65	Float	Avx time	Time since bootup Seconds
+69	Uint	Home Alt	Home Altitude in Meters*6 MSL (Mean Sea Level) (Meters+1000)*6

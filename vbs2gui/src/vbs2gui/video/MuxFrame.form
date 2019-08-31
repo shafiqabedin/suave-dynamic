@@ -1,0 +1,194 @@
+<?xml version="1.1" encoding="UTF-8" ?>
+
+<Form version="1.3" maxVersion="1.7" type="org.netbeans.modules.form.forminfo.JFrameFormInfo">
+  <Properties>
+    <Property name="defaultCloseOperation" type="int" value="3"/>
+  </Properties>
+  <SyntheticProperties>
+    <SyntheticProperty name="formSizePolicy" type="int" value="1"/>
+  </SyntheticProperties>
+  <AuxValues>
+    <AuxValue name="FormSettings_autoResourcing" type="java.lang.Integer" value="0"/>
+    <AuxValue name="FormSettings_autoSetComponentName" type="java.lang.Boolean" value="false"/>
+    <AuxValue name="FormSettings_generateFQN" type="java.lang.Boolean" value="true"/>
+    <AuxValue name="FormSettings_generateMnemonicsCode" type="java.lang.Boolean" value="false"/>
+    <AuxValue name="FormSettings_i18nAutoMode" type="java.lang.Boolean" value="false"/>
+    <AuxValue name="FormSettings_layoutCodeTarget" type="java.lang.Integer" value="1"/>
+    <AuxValue name="FormSettings_listenerGenerationStyle" type="java.lang.Integer" value="0"/>
+    <AuxValue name="FormSettings_variablesLocal" type="java.lang.Boolean" value="false"/>
+    <AuxValue name="FormSettings_variablesModifier" type="java.lang.Integer" value="2"/>
+  </AuxValues>
+
+  <Layout>
+    <DimensionLayout dim="0">
+      <Group type="103" groupAlignment="0" attributes="0">
+          <Group type="102" attributes="0">
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="0" attributes="0">
+                  <Component id="uavPanel" alignment="1" max="32767" attributes="0"/>
+                  <Group type="102" alignment="0" attributes="0">
+                      <Group type="103" groupAlignment="0" attributes="0">
+                          <Component id="posXLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="posYLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="posZLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="dirXLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="dirYLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="dirZLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="upXLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="upYLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                          <Component id="upZLabel" alignment="0" min="-2" max="-2" attributes="0"/>
+                      </Group>
+                      <EmptySpace type="separate" max="-2" attributes="0"/>
+                      <Group type="103" groupAlignment="0" attributes="0">
+                          <Component id="upZField" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="upYField" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="upXField" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="dirZField" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="dirYField" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="dirXField" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="posXField" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="posYField" alignment="0" min="-2" pref="172" max="-2" attributes="0"/>
+                          <Component id="posZField" alignment="0" min="-2" pref="172" max="-2" attributes="0"/>
+                      </Group>
+                  </Group>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+          </Group>
+      </Group>
+    </DimensionLayout>
+    <DimensionLayout dim="1">
+      <Group type="103" groupAlignment="0" attributes="0">
+          <Group type="102" alignment="0" attributes="0">
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="posXLabel" alignment="3" pref="21" max="32767" attributes="1"/>
+                  <Component id="posXField" alignment="3" pref="19" max="32767" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="posYLabel" alignment="3" pref="23" max="32767" attributes="1"/>
+                  <Component id="posYField" alignment="3" min="-2" pref="19" max="-2" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="posZLabel" alignment="3" pref="19" max="32767" attributes="1"/>
+                  <Component id="posZField" alignment="3" min="-2" max="-2" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="dirXLabel" alignment="3" pref="21" max="32767" attributes="1"/>
+                  <Component id="dirXField" alignment="3" pref="19" max="32767" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="dirYLabel" alignment="3" pref="23" max="32767" attributes="1"/>
+                  <Component id="dirYField" alignment="3" min="-2" pref="19" max="-2" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="dirZLabel" alignment="3" pref="19" max="32767" attributes="1"/>
+                  <Component id="dirZField" alignment="3" min="-2" max="-2" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="upXLabel" alignment="3" pref="21" max="32767" attributes="1"/>
+                  <Component id="upXField" alignment="3" pref="19" max="32767" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="upYLabel" alignment="3" pref="23" max="32767" attributes="1"/>
+                  <Component id="upYField" alignment="3" min="-2" pref="19" max="-2" attributes="1"/>
+              </Group>
+              <EmptySpace max="-2" attributes="0"/>
+              <Group type="103" groupAlignment="3" attributes="0">
+                  <Component id="upZLabel" alignment="3" pref="19" max="32767" attributes="1"/>
+                  <Component id="upZField" alignment="3" min="-2" max="-2" attributes="1"/>
+              </Group>
+              <EmptySpace type="unrelated" max="-2" attributes="0"/>
+              <Component id="uavPanel" min="-2" max="-2" attributes="0"/>
+              <EmptySpace min="-2" max="-2" attributes="0"/>
+          </Group>
+      </Group>
+    </DimensionLayout>
+  </Layout>
+  <SubComponents>
+    <Component class="javax.swing.JLabel" name="posXLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="pos X (m)"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JTextField" name="posXField">
+    </Component>
+    <Component class="javax.swing.JLabel" name="posYLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="pos Y (m)"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JTextField" name="posYField">
+    </Component>
+    <Component class="javax.swing.JLabel" name="posZLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="pos ASL (m)"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JTextField" name="posZField">
+    </Component>
+    <Container class="javax.swing.JPanel" name="uavPanel">
+
+      <Layout>
+        <DimensionLayout dim="0">
+          <Group type="103" groupAlignment="0" attributes="0">
+              <EmptySpace min="0" pref="281" max="32767" attributes="0"/>
+          </Group>
+        </DimensionLayout>
+        <DimensionLayout dim="1">
+          <Group type="103" groupAlignment="0" attributes="0">
+              <EmptySpace min="0" pref="40" max="32767" attributes="0"/>
+          </Group>
+        </DimensionLayout>
+      </Layout>
+    </Container>
+    <Component class="javax.swing.JTextField" name="dirZField">
+    </Component>
+    <Component class="javax.swing.JTextField" name="dirYField">
+    </Component>
+    <Component class="javax.swing.JTextField" name="dirXField">
+    </Component>
+    <Component class="javax.swing.JLabel" name="dirXLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="dir X"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JLabel" name="dirYLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="dir Y"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JLabel" name="dirZLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="dir Z"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JTextField" name="upZField">
+    </Component>
+    <Component class="javax.swing.JTextField" name="upYField">
+    </Component>
+    <Component class="javax.swing.JTextField" name="upXField">
+    </Component>
+    <Component class="javax.swing.JLabel" name="upXLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="up X"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JLabel" name="upYLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="up Y"/>
+      </Properties>
+    </Component>
+    <Component class="javax.swing.JLabel" name="upZLabel">
+      <Properties>
+        <Property name="text" type="java.lang.String" value="up Z"/>
+      </Properties>
+    </Component>
+  </SubComponents>
+</Form>

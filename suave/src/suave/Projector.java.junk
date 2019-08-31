@@ -1,0 +1,680 @@
+package suave;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.*;
+import java.io.*;
+import java.nio.*;
+import java.util.*;
+import javax.imageio.*;
+import javax.swing.*;
+
+import javax.media.opengl.*;
+import javax.media.opengl.glu.*;
+import com.sun.opengl.util.*;
+import com.sun.opengl.util.texture.*;
+import demos.common.*;
+import demos.util.*;
+import gleem.*;
+import gleem.linalg.*;
+import gleem.linalg.Vec3f;
+
+public class Projector {
+
+    String filename;
+    private Model model = null;
+
+    private GLPbuffer pbuffer;
+    private GLU  glu;
+    private GLUT glut;
+
+    private float[] light_ambient   = { 0, 0, 0, 0 };
+    private float[] light_intensity = { 1, 1, 1, 1 };
+    private float[] light_pos       = { 0, 0, 0, 1 };
+
+    static class Tweak {
+	String name;
+	float val;
+	float incr;
+
+	Tweak(String name, float val, float incr) {
+	    this.name = name;
+	    this.val = val;
+	    this.incr = incr;
+	}
+    };
+    private java.util.List/*<Tweak>*/ tweaks = new ArrayList();
+    private static final int R_COORDINATE_SCALE   = 0;
+    private static final int R_COORDINATE_BIAS    = 1;
+    private static final int POLYGON_OFFSET_SCALE = 2;
+    private static final int POLYGON_OFFSET_BIAS  = 3;
+    private int curr_tweak;
+
+    // Texture objects
+    private static final int TEX_SIZE = 1024;
+
+    // SEAN: This is the texture on the flat poly that the teapot 'sits' on. 
+    //
+    //  private Texture decal;
+    private Texture light_image;
+    private int light_view_depth;
+
+    // Depth buffer format
+    private int depth_format;
+
+    private boolean fullyInitialized;
+
+    private int projectorFrustrumWireFrame;
+
+    // Shadowing light
+    private float lightshaper_fovy  = 60.0f;
+    private float lightshaper_zNear = 0.5f;
+    private float lightshaper_zFar  = 5.0f;
+
+    // Manipulators
+    private GLAutoDrawable drawable;
+    private ExaminerViewer viewer;
+    private boolean  doViewAll = true;
+    //  private float    zNear = 0.5f;
+    //  private float    zFar  = 5.0f;
+    private float    zNear = 0.5f;
+    private float    zFar  = 50.0f;
+    private HandleBoxManip object;
+    private HandleBoxManip spotlight;
+    private Mat4f cameraPerspective = new Mat4f();
+    private Mat4f cameraTransform = new Mat4f();
+    private Mat4f cameraInverseTransform = new Mat4f();
+    private Mat4f spotlightTransform = new Mat4f();
+    private Mat4f spotlightInverseTransform = new Mat4f();
+    private Mat4f objectTransform = new Mat4f();
+    private int viewportX;
+    private int viewportY;
+
+    public Projector(String fileToProject,Model model) {
+	this.filename = fileToProject;
+	this.model = model;
+    }
+
+    private void unavailableExtension(String message) {
+	JOptionPane.showMessageDialog(null, message, "Unavailable extension", JOptionPane.ERROR_MESSAGE);
+	throw new GLException(message);
+    }
+
+    // NOTE: In original demo code, the main class implemented
+    // GLEventListener, which called init().  In our case Renderer is
+    // our GLEventListener so it has an init which calls here.
+    public void init(GLAutoDrawable drawable) {
+	// Use debug pipeline
+	// drawable.setGL(new DebugGL(drawable.getGL()));
+
+	GL gl = drawable.getGL();
+	glu = new GLU();
+	glut = new GLUT();
+
+	// NOTE: Done already in Renderer
+// 	try {
+// 	    checkExtension(gl, "GL_VERSION_1_3"); // For multitexture
+// 	    checkExtension(gl, "GL_ARB_depth_texture");
+// 	    checkExtension(gl, "GL_ARB_shadow");
+// 	    checkExtension(gl, "GL_ARB_pbuffer");
+// 	    checkExtension(gl, "GL_ARB_pixel_format");
+// 	} catch (GLException e) {
+// 	    e.printStackTrace();
+// 	    throw(e);
+// 	}
+      
+	gl.glClearColor(.5f, .5f, .5f, .5f);
+
+	try {
+	    // The texture on the flat poly the teapot sits on
+
+// 	    decal = TextureIO.newTexture(getClass().getClassLoader().getResourceAsStream("demos/data/images/decal_image.png"),
+// 					 true,
+// 					 TextureIO.PNG);
+// 	    decal.setTexParameteri(GL.GL_TEXTURE_WRAP_S, GL.GL_REPEAT);
+// 	    decal.setTexParameteri(GL.GL_TEXTURE_WRAP_T, GL.GL_REPEAT);
+	    
+	    // the image we're projecting from the light
+	    System.err.println("Projector.init: Loading image from filename "+filename);
+// 	    light_image = TextureIO.newTexture(getClass().getClassLoader().getResourceAsStream(filename),
+// 					       true,
+// 					       TextureIO.PNG);
+	    light_image = TextureIO.newTexture(new File(filename),true);
+	} catch (IOException e) {
+	    throw new GLException(e);
+	}
+
+	//  the flat poly the teapot sits on
+// 	quad = gl.glGenLists(1);
+// 	gl.glNewList(quad, GL.GL_COMPILE);
+// 	gl.glPushMatrix();
+// 	gl.glRotatef(-90, 1, 0, 0);
+// 	gl.glScalef(4,4,4);
+// 	gl.glBegin(GL.GL_QUADS);
+// 	gl.glNormal3f(0, 0, 1);
+// 	gl.glVertex2f(-1, -1);
+// 	gl.glVertex2f(-1,  1);
+// 	gl.glVertex2f( 1,  1);
+// 	gl.glVertex2f( 1, -1);
+// 	gl.glEnd();
+// 	gl.glPopMatrix();
+// 	gl.glEndList();
+
+
+	projectorFrustrumWireFrame = gl.glGenLists(1);
+	gl.glNewList(projectorFrustrumWireFrame, GL.GL_COMPILE);
+	glut.glutWireCube(2);
+	gl.glEndList();
+
+	// the teapot
+// 	geometry = gl.glGenLists(1);
+// 	gl.glNewList(geometry, GL.GL_COMPILE);
+// 	gl.glPushMatrix();
+// 	glut.glutSolidTeapot(0.8f);
+// 	gl.glPopMatrix();
+// 	gl.glEndList();
+
+	gl.glEnable(GL.GL_LIGHT0);
+	gl.glLightfv(GL.GL_LIGHT0, GL.GL_AMBIENT, light_ambient, 0);
+	gl.glLightfv(GL.GL_LIGHT0, GL.GL_DIFFUSE, light_intensity, 0);
+	gl.glLightfv(GL.GL_LIGHT0, GL.GL_SPECULAR, light_intensity, 0);
+
+	gl.glEnable(GL.GL_DEPTH_TEST);
+
+	// init pbuffer
+	GLCapabilities caps = new GLCapabilities();
+	caps.setDoubleBuffered(false);
+      
+	if (!GLDrawableFactory.getFactory().canCreateGLPbuffer()) {
+	    unavailableExtension("Can not create pbuffer");
+	}
+	if (pbuffer != null) {
+	    pbuffer.destroy();
+	    pbuffer = null;
+	}
+	pbuffer = GLDrawableFactory.getFactory().createGLPbuffer(caps, null, TEX_SIZE, TEX_SIZE, drawable.getContext());
+	pbuffer.addGLEventListener(new PbufferListener());
+
+	// SEAN: This trips the display code to call 'reset' so to
+	// speak on the camera params object, which resets the view to
+	// be able to view everything.  @TODO: We may not want
+	// this... because of our skybox - it might reset viewpoint to
+	// be outside the skybox.
+	doViewAll = true;
+
+	// Register the window with the ManipManager
+	ManipManager manager = ManipManager.getManipManager();
+	manager.registerWindow(drawable);
+	this.drawable = drawable;
+
+	object = new HandleBoxManip();
+	object.setTranslation(new Vec3f(0, 0.7f, 1.8f));
+	object.setGeometryScale(new Vec3f(0.7f, 0.7f, 0.7f));
+	manager.showManipInWindow(object, drawable);
+
+	spotlight = new HandleBoxManip();
+	spotlight.setScale(new Vec3f(0.5f, 0.5f, 0.5f));
+	spotlight.setTranslation(new Vec3f(-0.25f, 2.35f, 5.0f));
+	spotlight.setRotation(new Rotf(Vec3f.X_AXIS, (float) Math.toRadians(-30.0f)));
+	manager.showManipInWindow(spotlight, drawable);
+
+	viewer = new ExaminerViewer(MouseButtonHelper.numMouseButtons());
+	viewer.attach(drawable, new BSphereProvider() {
+		public BSphere getBoundingSphere() {
+		    return new BSphere(object.getTranslation(), 2.0f);
+		}
+	    });
+	viewer.setOrientation(new Rotf(Vec3f.Y_AXIS, (float) Math.toRadians(45.0f)).times
+			      (new Rotf(Vec3f.X_AXIS, (float) Math.toRadians(-15.0f))));
+	viewer.setVertFOV((float) Math.toRadians(lightshaper_fovy / 2.0f));
+	viewer.setZNear(zNear);
+	viewer.setZFar(zFar);
+
+	float bias = 1/((float) Math.pow(2.0,16.0)-1);
+
+	tweaks.add(new Tweak("r coordinate scale",    0.5f, bias));
+	tweaks.add(new Tweak("r coordinate bias",     0.5f, bias));
+	tweaks.add(new Tweak("polygon offset scale",  2.5f, 0.5f));
+	tweaks.add(new Tweak("polygon offset bias",  10.0f, 1.0f));
+
+	drawable.addKeyListener(new KeyAdapter() {
+		public void keyPressed(KeyEvent e) {
+		    dispatchKey(e.getKeyChar());
+		    //		    demoListener.repaint();
+		}
+	    });
+    }
+
+    private void set_light_view_texture_parameters(GL gl) {
+	gl.glBindTexture(GL.GL_TEXTURE_2D, light_view_depth);
+	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MIN_FILTER, GL.GL_LINEAR);
+	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_MAG_FILTER, GL.GL_LINEAR);
+	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP_TO_EDGE);
+	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_WRAP_T, GL.GL_CLAMP_TO_EDGE);
+	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_COMPARE_MODE_ARB, GL.GL_COMPARE_R_TO_TEXTURE_ARB);
+	gl.glTexParameteri(GL.GL_TEXTURE_2D, GL.GL_TEXTURE_COMPARE_FUNC_ARB, GL.GL_LEQUAL);
+    }
+
+    private int genTexture(GL gl) {
+	int[] tmp = new int[1];
+	gl.glGenTextures(1, tmp, 0);
+	return tmp[0];
+    }
+
+    // SEAN: I've seen mention of eye linear texgen before elsewhere
+    // in forum threads about shadowmapping ec.  ...  so this is
+    // probably important.
+    private void eye_linear_texgen(GL gl) {
+	Mat4f m = new Mat4f();
+	m.makeIdent();
+
+	set_texgen_planes(gl, GL.GL_EYE_PLANE, m);
+	gl.glTexGeni(GL.GL_S, GL.GL_TEXTURE_GEN_MODE, GL.GL_EYE_LINEAR);
+	gl.glTexGeni(GL.GL_T, GL.GL_TEXTURE_GEN_MODE, GL.GL_EYE_LINEAR);
+	gl.glTexGeni(GL.GL_R, GL.GL_TEXTURE_GEN_MODE, GL.GL_EYE_LINEAR);
+	gl.glTexGeni(GL.GL_Q, GL.GL_TEXTURE_GEN_MODE, GL.GL_EYE_LINEAR);
+    }
+
+    private void obj_linear_texgen(GL gl) {
+	Mat4f m = new Mat4f();
+	m.makeIdent();
+
+	set_texgen_planes(gl, GL.GL_OBJECT_PLANE, m);
+	gl.glTexGeni(GL.GL_S, GL.GL_TEXTURE_GEN_MODE, GL.GL_OBJECT_LINEAR);
+	gl.glTexGeni(GL.GL_T, GL.GL_TEXTURE_GEN_MODE, GL.GL_OBJECT_LINEAR);
+	gl.glTexGeni(GL.GL_R, GL.GL_TEXTURE_GEN_MODE, GL.GL_OBJECT_LINEAR);
+	gl.glTexGeni(GL.GL_Q, GL.GL_TEXTURE_GEN_MODE, GL.GL_OBJECT_LINEAR);
+    }
+
+    private void set_texgen_planes(GL gl, int plane_type, Mat4f m) {
+	int[] coord = {GL.GL_S, GL.GL_T, GL.GL_R, GL.GL_Q};
+	float[] row = new float[4];
+	for(int i = 0; i < 4; i++) {
+	    getRow(m, i, row);
+	    gl.glTexGenfv(coord[i], plane_type, row, 0);
+	}
+    }
+
+    private void texgen(GL gl, boolean enable) {
+	if(enable) {
+	    gl.glEnable(GL.GL_TEXTURE_GEN_S);
+	    gl.glEnable(GL.GL_TEXTURE_GEN_T);
+	    gl.glEnable(GL.GL_TEXTURE_GEN_R);
+	    gl.glEnable(GL.GL_TEXTURE_GEN_Q);
+	} else {
+	    gl.glDisable(GL.GL_TEXTURE_GEN_S);
+	    gl.glDisable(GL.GL_TEXTURE_GEN_T);
+	    gl.glDisable(GL.GL_TEXTURE_GEN_R);
+	    gl.glDisable(GL.GL_TEXTURE_GEN_Q);
+	}
+    }
+
+    private void render_scene_from_light_view(GL gl, GLAutoDrawable drawable, int viewportX, int viewportY) {
+	// place light
+	gl.glPushMatrix();
+	gl.glLoadIdentity();
+	gl.glLightfv(GL.GL_LIGHT0, GL.GL_POSITION, light_pos, 0);
+	gl.glPopMatrix();
+
+	// spot image
+	gl.glActiveTexture(GL.GL_TEXTURE1);
+
+	gl.glPushMatrix();
+	eye_linear_texgen(gl);    
+	texgen(gl, true);
+	gl.glPopMatrix();
+
+	gl.glMatrixMode(GL.GL_TEXTURE);
+	gl.glLoadIdentity();
+	gl.glTranslatef(.5f, .5f, .5f);
+	gl.glScalef(.5f, .5f, .5f);
+	glu.gluPerspective(lightshaper_fovy, 1, lightshaper_zNear, lightshaper_zFar);
+	gl.glMatrixMode(GL.GL_MODELVIEW);
+
+	light_image.bind();
+	light_image.enable();
+	gl.glTexEnvi(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_REPLACE);
+
+	gl.glActiveTexture(GL.GL_TEXTURE0);
+
+	gl.glViewport(0, 0, TEX_SIZE, TEX_SIZE);
+	gl.glMatrixMode(GL.GL_PROJECTION);
+	gl.glLoadIdentity();
+	glu.gluPerspective(lightshaper_fovy, 1, lightshaper_zNear, lightshaper_zFar);
+	gl.glMatrixMode(GL.GL_MODELVIEW);
+
+	// This displayMode is controlled by user in the demo - we're
+	// not using this.
+	//
+	// 	if (displayMode == RENDER_SCENE_FROM_LIGHT_VIEW)
+	// 	    largest_square_power_of_two_viewport(gl, drawable, viewportX, viewportY);
+	render_scene(gl, spotlightTransform, null, null);
+
+	gl.glActiveTexture(GL.GL_TEXTURE1);
+	light_image.disable();
+	gl.glActiveTexture(GL.GL_TEXTURE0);
+    }
+
+    // SEAN: given a camera parameter and a view mat4, render the
+    // scene?  It draws the quad and the 'geometry' which is simply
+    // the teapot.
+
+    private void render_scene(GL gl, Mat4f view, GLAutoDrawable drawable, CameraParameters params) {
+	gl.glColor3f(1,1,1);
+	gl.glPushMatrix();
+	Mat4f inverseView = new Mat4f(view);
+	inverseView.invertRigid();
+	applyTransform(gl, inverseView);
+
+	gl.glPushMatrix();
+// 	render_quad(gl);
+
+	applyTransform(gl, objectTransform);
+
+	gl.glEnable(GL.GL_LIGHTING);
+	//	System.err.println("Projector.render_scene: rendering model!");
+
+ 	gl.glPushMatrix();
+	gl.glLoadIdentity();
+	applyTransform(gl, cameraInverseTransform);
+	//	gl.glScalef(1.0f,1.0f,-1.0f);	 // Flip to a Left handed coordinate system
+	model.render(gl);
+	gl.glPopMatrix();
+
+	gl.glDisable(GL.GL_LIGHTING);
+
+	gl.glPopMatrix();
+
+	gl.glPopMatrix();
+    } 
+
+    private static void getRow(Mat4f m, int row, float[] out) {
+	out[0] = m.get(row, 0);
+	out[1] = m.get(row, 1);
+	out[2] = m.get(row, 2);
+	out[3] = m.get(row, 3);
+    }
+
+    private static void applyTransform(GL gl, Mat4f xform) {
+	float[] data = new float[16];
+	xform.getColumnMajorData(data);
+	gl.glMultMatrixf(data, 0);
+    }
+
+    // SEAN: I'm pretty sure this is the display routine for the whole
+    // shebang, i.e. this is what is drawing what we see on screen.
+    public void display(GLAutoDrawable drawable) {
+	viewer.update();
+
+	// Grab these values once per render to avoid multithreading
+	// issues with their values being changed by manipulation from
+	// the AWT thread during the render
+
+	// SEAN: CameraParameters is in gleem, it holds all the info to
+	// specify where the viewpoint (camera) is.  
+
+	CameraParameters params = viewer.getCameraParameters();
+
+	// SEAN: cameraPerspective is a Mat4 (4x4 matrix) and is defined in gleem/linalg
+	cameraPerspective.set(params.getProjectionMatrix());
+	cameraInverseTransform.set(params.getModelviewMatrix());
+	cameraTransform.set(cameraInverseTransform);
+	cameraTransform.invertRigid();
+
+	// SEAN: In this demo the spotlight can move so we also have to go
+	// get it's current position.  spotlight is a HandleBoxManip, so
+	// it's in gleem.  It's how the user grabs the spotlight wiht his
+	// mouse and moves it around.
+
+	spotlightTransform.set(spotlight.getTransform());
+	spotlightInverseTransform.set(spotlightTransform);
+	spotlightInverseTransform.invertRigid();
+
+	// SEAN: object is also a HandleBoxManip so the user can drag the
+	// teapot around
+	objectTransform.set(object.getTransform());
+	
+	if (!fullyInitialized) {
+	    if (pbuffer != null) {
+		pbuffer.display();
+	    }
+	}
+
+// 	if (!fullyInitialized) {
+// 	    // Repaint again later once everything is set up
+// 	    demoListener.repaint();
+// 	    return;
+// 	}
+
+	GL gl = drawable.getGL();
+
+	gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
+
+	// SEAN: I think this is 'resetting' the camera viewpoint... hmm,
+	// it says it recomputes position based on visibile geometry so
+	// maybe it's smart enough to set the view to take in everything.
+	if (doViewAll) {
+	    viewer.viewAll(gl);
+	    doViewAll = false;
+	    // Immediately zap effects
+	    gl.glMatrixMode(GL.GL_PROJECTION);
+	    gl.glLoadIdentity();
+	    gl.glMatrixMode(GL.GL_MODELVIEW);
+	    gl.glLoadIdentity();
+	    // Schedule repaint to clean up first bogus frame
+	    //	    demoListener.repaint();
+	}
+
+	render_scene_from_camera_view(gl, drawable, params); 
+    }
+
+    // SEAN: OK... now... place the light, then set active texture to
+    // texture1, then calls.... eye_linear_texgen. Buh.  it does a
+    // buncha stuff... looks like it's drawing the decal at this point
+    // maybe? then it sets teh viewport to the normal viewport, calls
+    // render_scene(), then render_manipulators(), then
+    // render_light_frustum().
+    private void render_scene_from_camera_view(GL gl, GLAutoDrawable drawable, CameraParameters params) {
+	// place light
+	gl.glPushMatrix();
+	gl.glLoadIdentity();
+	applyTransform(gl, cameraInverseTransform);
+	applyTransform(gl, spotlightTransform);
+	gl.glLightfv(GL.GL_LIGHT0, GL.GL_POSITION, light_pos, 0);
+	gl.glPopMatrix();
+
+	// spot image
+	gl.glActiveTexture(GL.GL_TEXTURE1);
+
+	gl.glPushMatrix();
+	applyTransform(gl, cameraInverseTransform);
+	eye_linear_texgen(gl);    
+	texgen(gl, true);
+	gl.glPopMatrix();
+
+	gl.glMatrixMode(GL.GL_TEXTURE);
+	gl.glLoadIdentity();
+	gl.glTranslatef(.5f, .5f, .5f);
+	gl.glScalef(.5f, -.5f, .5f);
+	glu.gluPerspective(lightshaper_fovy, 1, lightshaper_zNear, lightshaper_zFar);
+	applyTransform(gl, spotlightInverseTransform);
+	gl.glMatrixMode(GL.GL_MODELVIEW);
+
+	light_image.bind();
+	light_image.enable();
+	gl.glTexEnvi(GL.GL_TEXTURE_ENV, GL.GL_TEXTURE_ENV_MODE, GL.GL_REPLACE);
+
+	gl.glActiveTexture(GL.GL_TEXTURE0);
+	gl.glMatrixMode(GL.GL_PROJECTION);
+	gl.glLoadIdentity();
+	gl.glViewport(viewportX, viewportY, drawable.getWidth(), drawable.getHeight());
+	applyTransform(gl, cameraPerspective);
+	gl.glMatrixMode(GL.GL_MODELVIEW);
+	render_scene(gl, cameraTransform, drawable, params);
+
+	gl.glActiveTexture(GL.GL_TEXTURE1);
+	light_image.disable();
+	gl.glActiveTexture(GL.GL_TEXTURE0);
+
+	render_manipulators(gl, cameraTransform, drawable, params);
+
+	render_light_frustum(gl);
+    }
+
+    // SEAN: drawing the manipulators - no dobut broken out so it
+    // doesn't draw them when it's building the light depth map.
+    private void render_manipulators(GL gl, Mat4f view, GLAutoDrawable drawable, CameraParameters params) {
+	gl.glColor3f(1,1,1);
+	gl.glPushMatrix();
+	Mat4f inverseView = new Mat4f(view);
+	inverseView.invertRigid();
+	applyTransform(gl, inverseView);
+
+	if (params != null) {
+	    ManipManager.getManipManager().updateCameraParameters(drawable, params);
+	    ManipManager.getManipManager().render(drawable, gl);
+	}
+
+	gl.glPopMatrix();
+    }
+
+    // SEAN: I think this is just the wireframe outline of the light
+    // furstrum that it draws on screen for hte user to see.
+    private void render_light_frustum(GL gl) {
+	gl.glPushMatrix();
+	applyTransform(gl, cameraInverseTransform);
+	applyTransform(gl, spotlightTransform);
+	applyTransform(gl, perspectiveInverse(lightshaper_fovy, 1, lightshaper_zNear, lightshaper_zFar));
+	gl.glDisable(GL.GL_LIGHTING);
+	gl.glColor3f(1,1,0);
+	gl.glCallList(projectorFrustrumWireFrame);
+	gl.glColor3f(1,1,1);
+	gl.glEnable(GL.GL_LIGHTING);
+	gl.glPopMatrix();
+    }
+
+    private static Mat4f perspectiveInverse(float fovy, float aspect, float zNear, float zFar) {
+	float tangent = (float) Math.tan(Math.toRadians(fovy / 2.0));
+	float y = tangent * zNear;
+	float x = aspect * y;
+	return frustumInverse(-x, x, -y, y, zNear, zFar);
+    }
+
+    private static Mat4f frustumInverse(float left, float right,
+					float bottom, float top,
+					float zNear, float zFar) {
+	Mat4f m = new Mat4f();
+	m.makeIdent();
+
+	m.set(0, 0, (right - left) / (2 * zNear));
+	m.set(0, 3, (right + left) / (2 * zNear));
+	
+	m.set(1, 1, (top - bottom) / (2 * zNear));
+	m.set(1, 3, (top + bottom) / (2 * zNear));
+
+	m.set(2, 2,  0);
+	m.set(2, 3, -1);
+	
+	m.set(3, 2, -(zFar - zNear) / (2 * zFar * zNear));
+	m.set(3, 3,  (zFar + zNear) / (2 * zFar * zNear));
+
+	return m;
+    }
+
+    private void dispatchKey(char k) {
+	switch (k) {
+	case 'v':
+	    doViewAll = true;
+	    System.err.println("Forcing viewAll()");
+	    break;
+
+	default:
+	    break;
+	}
+    }
+
+
+    class PbufferListener implements GLEventListener {
+	public void init(GLAutoDrawable drawable) {
+	    // Use debug pipeline
+	    // drawable.setGL(new DebugGL(drawable.getGL()));
+
+	    GL gl = drawable.getGL();
+
+	    gl.glEnable(GL.GL_DEPTH_TEST);
+
+	    int[] depth_bits = new int[1];
+	    gl.glGetIntegerv(GL.GL_DEPTH_BITS, depth_bits, 0);
+        
+	    if (depth_bits[0] == 16)  depth_format = GL.GL_DEPTH_COMPONENT16_ARB;
+	    else                      depth_format = GL.GL_DEPTH_COMPONENT24_ARB;
+
+	    // SEAN: light_view_depth is almost certainly the texture where
+	    // we build/store the depth map from the light POV
+	    light_view_depth = genTexture(gl);
+	    gl.glBindTexture(GL.GL_TEXTURE_2D, light_view_depth);
+	    gl.glTexImage2D(GL.GL_TEXTURE_2D, 0, depth_format, TEX_SIZE, TEX_SIZE, 0, 
+			    GL.GL_DEPTH_COMPONENT, GL.GL_UNSIGNED_INT, null);
+	    set_light_view_texture_parameters(gl);
+
+	    fullyInitialized = true;
+	}
+
+	// SEAN: OK, note this is a display() routine for the class
+	// PbufferListener.  So I'm guessing the pbuffer is an offscreen
+	// buffer.  it has it's own event listener, and when display()
+	// gets called, we call render_scene_from_light_view() to
+	// generate the depthbuffer into light_view_depth?
+	public void display(GLAutoDrawable drawable) {
+	    GL gl = drawable.getGL();
+
+	    gl.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT);
+
+	    gl.glPolygonOffset(((Tweak) tweaks.get(POLYGON_OFFSET_SCALE)).val,
+			       ((Tweak) tweaks.get(POLYGON_OFFSET_BIAS)).val);
+	    gl.glEnable(GL.GL_POLYGON_OFFSET_FILL);
+
+	    render_scene_from_light_view(gl, drawable, 0, 0);
+
+	    gl.glDisable(GL.GL_POLYGON_OFFSET_FILL);
+    
+	    gl.glBindTexture(GL.GL_TEXTURE_2D, light_view_depth);
+
+	    // SEAN: "glCopyTexSubImage2D replaces a rectangular portion of
+	    // a two-dimensional texture image or cube-map texture image
+	    // with pixels from the current GL_READ_BUFFER (rather than from
+	    // main memory, as is the case for glTexSubImage2D)."  So it's
+	    // copying from GL_READ_BUFFER to GL.GL_TEXTURE_2D, whcih we've
+	    // juts bound (above) to light_view_depth.  
+
+	    // SEAN: So what's a GL_READ_BUFFER?
+
+	    // SEAN: http://www-f9.ijs.si/~matevz/docs/007-2392-003/sgi_html/ch06.html
+
+	    // > Having both a read and a write drawable is useful—for
+	    // > example, to copy the contents of a window to another window,
+	    // > to stream video to a window, and so on.
+	    // > 
+	    // > The write drawable is used for all OpenGL
+	    // > operations. Accumulation buffer operations fetch data from
+	    // > the write drawable and are not allowed when the read and
+	    // > write drawable are not identical.
+	    //
+	    // > The read drawable is used for any color, depth, or stencil
+	    // > values that are retrieved by glReadPixels(), glCopyPixels(),
+	    // > glCopyTexImage(), or glCopyTexSubImage(). It is also use by
+	    // > any OpenGL extension that sources images from the framebuffer
+	    // > in the manner of glReadPixels(), glCopyPixels(),
+	    // > glCopyTexImage(), or glCopyTexSubImage().
+
+
+	    // trying different ways of getting the depth info over
+	    gl.glCopyTexSubImage2D(GL.GL_TEXTURE_2D, 0,   0, 0,   0, 0,  TEX_SIZE, TEX_SIZE);
+	}
+
+	// Unused routines
+	public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {}
+	public void displayChanged(GLAutoDrawable drawable, boolean modeChanged, boolean deviceChanged) {}
+    }
+
+}

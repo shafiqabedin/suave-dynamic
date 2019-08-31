@@ -1,0 +1,423 @@
+// from http://www.openmap.org/mailArchives/openmap-users/2005-10/4353.html
+/*
+ * Copyright NAVICON A/S 2005
+ * com@navicon.dk
+ *
+ **/
+
+package dk.navicon.openmap.layer;
+
+import java.awt.Component;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.Properties;
+
+import javax.media.jai.JAI;
+import javax.media.jai.PlanarImage;
+
+import com.bbn.openmap.LatLonPoint;
+import com.bbn.openmap.omGraphics.OMGraphicList;
+import com.bbn.openmap.omGraphics.OMScalingRaster;
+import com.bbn.openmap.plugin.OMGraphicHandlerPlugIn;
+import com.bbn.openmap.proj.Projection;
+import com.bbn.openmap.proj.coords.DMSLatLonPoint;
+import com.bbn.openmap.util.Debug;
+import com.bbn.openmap.util.PropUtils;
+import com.sun.media.jai.codec.FileSeekableStream;
+import com.sun.media.jai.codec.TIFFDirectory;
+import com.sun.media.jai.codec.TIFFField;
+
+/**
+ * @author com@navicon.dk
+ *
+ * This is a modification of some code by William Art <artw@saharamaps.com>
+ * posted on the openmap mailing list
+ *
+ * This class will open any of the following image file formats:
+ *
+ * <ul>
+ * <li>geo tiff
+ * <li>jpeg
+ * <li>bmp</li>
+ * </ul>
+ *
+ * Only lat/lon projection is supported.
+ *
+ * Using the java JAI package
+(http://java.sun.com/products/java-media/jai/). To
+ * use this class you must have the JAI package installed and available
+in your
+ * classpath when running OpenMap.
+ *
+ * Properties example:
+ *
+ * <pre>
+ *
+ *
+ * JAILayer.prettyName=MyJAILayer
+ * JAILayer.class=dk.navicon.openmap.layer.JAIPlugIn
+ *
+JAILayer.imageFile=/opt/Mapdata/AHOWEB_DP001/AUS00605/A00605.tif
+ *
+ *
+ * </pre>
+ *
+ * Currently the image must be in lat/lon this includes the world file.
+If you
+ * have geo tiff files in a different format like UTM you can use GDAL to
+ * reformat to lat/lon gdalwarp -co INTERLEAVE=PIXEL -t_srs WGS84
+ * S_10000_127.tif aarhus-havn.tif
+ *
+ * World files are assumed to end with w, i.e., xxx.jpg -> xxx.jgw etc.
+ *
+ */
+
+public class JAIPlugIn extends OMGraphicHandlerPlugIn {
+
+    double lat, lon, lat2, lon2, ximage_scale, yimage_scale;
+
+    // sourcelat,sourcelon;
+
+    protected PlanarImage source = null;
+
+    boolean DEBUG = false;
+
+    /** The property for the data file - tileFile. */
+    public final static String FileNameProperty = "imageFile";
+
+    /**
+     * The property for whether the data file has a descriptive header
+on the
+     * first line, to let the reader know to ignore that line -
+fileHasHeader.
+     * Default is true.
+     */
+
+    protected String imageFileName = null;
+
+    // the map
+    OMScalingRaster raster = null;
+
+    /**
+     * Default constructor.
+     */
+    public JAIPlugIn() {
+        super();
+        DEBUG = Debug.debugging("JAIPlugIn");
+    }
+
+    public JAIPlugIn(Component comp) {
+        super(comp);
+    }
+
+    /**
+     * The getRectangle call is the main call into the PlugIn module.
+The module
+     * is expected to fill the graphics list with objects that are
+within the
+     * screen parameters passed.
+     *
+     * @param p
+     * projection of the screen, holding scale, center coords,
+     * height, width.
+     */
+    public OMGraphicList getRectangle(Projection p) {
+
+        OMGraphicList list = (OMGraphicList) getList();
+        list.clear();
+
+        if (DEBUG) {
+            Debug.output("CSVTIPI: getRectangle");
+        }
+
+        if (raster == null) {
+            loadRaster(imageFileName);
+        }
+
+        if (raster.isOnMap(p)) {
+            if (DEBUG) {
+                Debug.output("CSVTIPI: image on map");
+            }
+            raster.generate(p);
+            list.add(raster);
+        } else if (DEBUG) {
+            Debug.output("CSVTIPI: image not on map, skipping");
+        }
+
+        repaint();
+        return list;
+
+    } // end getRectangle
+
+    /**
+     * PropertyConsumer method, setting the PlugIn with properties that
+apply to
+     * it.
+     */
+    public void setProperties(String prefix, Properties props) {
+        super.setProperties(prefix, props);
+
+        String realPrefix = PropUtils.getScopedPropertyPrefix(prefix);
+
+        imageFileName = props.getProperty(realPrefix + FileNameProperty);
+
+        if (DEBUG) {
+            Debug.output("CSVTIPI: file: " + imageFileName);
+        }
+
+    }
+
+    /**
+     * Takes the URL to a csv file and parses it into OMScaledRasters,
+adding
+     * them to the tiles HashSet.
+     */
+    protected void loadRaster(String csvFileName) {
+        if (imageFileName != null) {
+            try {
+                init();
+            } catch (FileNotFoundException e) {
+                Debug.output("CSVTIPI: file: " + imageFileName + " not
+found");
+                e.printStackTrace();
+            }
+            // OMScalingRaster omsr
+            raster = new OMScalingRaster((float) lat, (float) lon,
+                    (float) lat2, (float) lon2,
+source.getAsBufferedImage());
+        }
+    }
+
+    /**
+     * Method to fill in a Properties object, reflecting the current
+values of
+     * the PropertyConsumer. If the PropertyConsumer has a prefix set, the
+     * property keys should have that prefix plus a separating '.'
+prepended to
+     * each propery key it uses for configuration.
+     *
+     * @param getList
+     * a Properties object to load the PropertyConsumer
+properties
+     * into. If getList equals null, then a new Properties object
+     * should be created.
+     * @return Properties object containing PropertyConsumer property
+values. If
+     * getList was not null, this should equal getList.
+Otherwise, it
+     * should be the Properties object created by the
+PropertyConsumer.
+     */
+    public Properties getProperties(Properties getList) {
+        if (getList == null) {
+            getList = new Properties();
+        }
+
+        String prefix = PropUtils.getScopedPropertyPrefix(this);
+
+        getList.put(prefix + FileNameProperty,
+PropUtils.unnull(imageFileName));
+
+        return getList;
+    }
+
+    int sourceWidth;
+
+    int sourceHeigth;
+
+    public void init() throws FileNotFoundException {
+        try {
+
+            String associatedfile = imageFileName;
+            source = JAI.create("fileload", associatedfile);
+
+            sourceWidth = source.getWidth();
+            sourceHeigth = source.getHeight();
+
+            double xscale, yscale;
+            double lonNW, latNW;
+            String projfilename = imageFileName;
+            FileSeekableStream st;
+
+            if (imageFileName.endsWith(".tif")
+                    || imageFileName.endsWith(".TIF")) {
+
+                st = new FileSeekableStream(imageFileName);
+
+                TIFFDirectory td;
+                td = new TIFFDirectory(st, 0);
+
+                TIFFField tfMPS = td.getField(33550); // ModelPixelScaleTag
+                TIFFField tfMTP = td.getField(33922); // ModelTiepointTag
+
+                System.out.println("tfMPS " + tfMPS + "\ntfMTP " + tfMTP);
+
+                try {
+                    xscale = tfMPS.getAsDouble(0);
+                    yscale = tfMPS.getAsDouble(1);
+
+                    double[] tiepoints = tfMTP.getAsDoubles();
+
+                    System.out.println("count=" + tfMTP.getCount());
+
+                    for (int i = 0; i < tiepoints.length; i++) {
+                        System.out.println("-->" + tiepoints[i]);
+                    }
+
+                    System.out.println("type=" + tfMPS.getType());
+                    System.out.println("type=" + tfMTP.getType());
+                    System.out.println("nb of tiepoints = "
+                            + tfMTP.getAsDouble(0));
+
+                    if (tfMTP.getCount() != 6 && tfMTP.getCount() != 4) {
+                        System.out
+                                .println("warning tif file may pose
+problems...");
+                    }
+
+                    if (tfMTP.getCount() == 6) {
+                        lonNW = tfMTP.getAsDouble(3);
+                        latNW = tfMTP.getAsDouble(4);
+                    } else if (tfMTP.getCount() == 2) {
+                        lonNW = tfMTP.getAsDouble(0);
+                        latNW = tfMTP.getAsDouble(1);
+                    } else {
+                        lonNW = tfMTP.getAsDouble(2);
+                        latNW = tfMTP.getAsDouble(3);
+                    }
+
+                    DMSLatLonPoint upperLeft = new DMSLatLonPoint(new LatLonPoint(latNW, lonNW));
+                    DMSLatLonPoint lowerRight = new DMSLatLonPoint(
+		                                new LatLonPoint(latNW - (yscale * (source.getHeight())), 
+								lonNW + (xscale * (source.getWidth()))));
+
+                    System.out.println("xscale " + xscale + " yscale " + yscale
+                            + " lonNW " + lonNW + " latNW " + latNW
+                            + " img height " + source.getHeight()
+                            + " img width " + source.getWidth() + " "
+                            + formatDMSPoint(upperLeft) + " "
+                            + formatDMSPoint(lowerRight));
+                    init((double) (latNW), (double) (lonNW),
+                            (double) (latNW - (yscale * (source.getHeight()))),
+                            (double) (lonNW + (xscale * (source.getWidth()))),
+                            (double) xscale, (double) yscale);
+
+                    st.close();
+                } catch (Exception e) {
+                    st.close();
+                    System.out.println("Error reading geotiff" + e);
+                    e.printStackTrace();
+                    System.out.println("No Geotiff referencing found. Attempting projection file.");
+
+                    if (imageFileName.endsWith(".tif"))
+                        projfilename = imageFileName.replaceAll("\\.tif", ".tfw");
+
+                    setGeoReferencing(source, projfilename);
+                }
+
+            } else {
+
+                if (imageFileName.endsWith(".bmp"))
+                    projfilename = imageFileName.replaceAll("\\.bmp",
+".bpw");
+                else if (imageFileName.endsWith(".BMP"))
+                    projfilename = imageFileName.replaceAll("\\.BMP",
+".BPW");
+
+                else if (imageFileName.endsWith(".JPG"))
+                    projfilename = imageFileName.replaceAll("\\.JPG",
+".JGW");
+                else if (imageFileName.endsWith(".jpg"))
+                    projfilename = imageFileName.replaceAll("\\.jpg",
+".jgw");
+
+                setGeoReferencing(source, projfilename);
+            }
+        } catch (IOException e) {
+            System.out.println("OMJAIScalingRaster...");
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void setGeoReferencing(PlanarImage src, String projfilename)
+            throws FileNotFoundException {
+        double xscale;
+        double yscale;
+        double lonNW;
+        double latNW;
+        try {
+            FileReader projectionFile;
+            projectionFile = new FileReader(projfilename);
+            BufferedReader reader = new BufferedReader(projectionFile);
+            String line = reader.readLine();
+            System.out.println("xscale=" + line);
+            xscale = Double.valueOf(line).doubleValue();
+
+            line = reader.readLine();
+            line = reader.readLine();
+            line = reader.readLine();
+            System.out.println("yscale=" + line);
+            yscale = -Double.valueOf(line).doubleValue();
+            // System.out.println(line);
+            line = reader.readLine();
+            lonNW = Double.valueOf(line).doubleValue();
+            System.out.println("lonNW=" + line);
+            line = reader.readLine();
+            latNW = Double.valueOf(line).doubleValue();
+            System.out.println("latNW=" + line + " width=" + sourceWidth
+                    + " sourceHeigth" + sourceHeigth);
+
+            // reader.close();
+            projectionFile.close();
+            reader.close();
+
+            // if (xsize == -1 || ysize == -1)
+            // {
+            init((double) (latNW), (double) (lonNW),
+                    (double) (latNW - (xscale * (sourceHeigth))),
+                    (double) (lonNW + (yscale * (sourceWidth))),
+                    (double) xscale, (double) yscale);
+            // }
+            // else
+            // init((double) (latNW), (double) (lonNW), (double) (latNW -
+            // (xscale * ysize)), (double) (lonNW + (yscale * xsize)),
+(double)
+            // xscale, (double) yscale);
+
+        } catch (IOException e) {
+            System.out.println("setgeo :" + e.getMessage());
+        }
+    }
+
+    void init(double lt, double ln, double lt_2, double ln_2, double
+xim_scale,
+            double yim_scale) {
+        lat = (float) lt;
+        lon = (float) ln;
+
+        ximage_scale = xim_scale;
+        yimage_scale = yim_scale;
+        // sourcelat = lt;
+        // sourcelon = lon;
+
+        lat2 = lt_2;
+        lon2 = ln_2;
+
+        System.out.println("lat " + lat + " lon " + lon + " lat2 " + lat2
+                + " lon2 " + lon2);
+
+    }
+
+    private String formatDMSPoint(DMSLatLonPoint p) {
+        String res = "[[";
+        res += p.lat_isnegative ? "-" : "";
+        res += p.lat_degrees + " " + p.lat_minutes + " " + p.lat_seconds
+                + "] [";
+        res += p.lon_isnegative ? "-" : "";
+        res += p.lon_degrees + " " + p.lon_minutes + " " + p.lon_seconds
++ "]]";
+        return res;
+    }
+} 

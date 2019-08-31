@@ -1,0 +1,2 @@
+cd F:\laptop\owens\suave
+"c:\Program Files\Java\jdk1.6.0_10\bin\javac"  -cp .;F:\laptop\owens\jogl-1.1.1-windows-i586\lib\jogl.jar;F:\laptop\owens\jogl-1.1.1-windows-i586\lib\gluegen-rt.jar;F:\laptop\owens\jai\jai_codec.jar;F:\laptop\owens\jai\jai_core.jar;F:\laptop\owens\geotransform\geotransform.jar;F:\laptop\owens;F:\laptop\owens\objloader\OBJLoader.jar;F:\laptop\owens\jogl-demos-src\jogl-demos\src\ *.java
