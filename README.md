@@ -1,1 +1,5 @@
 # suave-dynamic
+
+Simple UAV Environment (SUAVE) is an experimental system being developed to investigate the use of model-inspection techniques to exploit real-time video feeds.  One of the benefits of model-inspection based display is that temporal and spatial resolution can be traded off.  If data is collected at high spatial resolution, then large regions can be searched and inspected closely but some data may be obsolete.  If large areas must be surveilled for rapidly unfolding events, spatial resolution can be sacrificed and temporal resolution maintained by having the platforms cover larger areas at a higher frequency.  This approach has favorable scaling effects for human-UAV interaction because adding UAVs acts either to improve the frequency at which imagery is updated (temporal resolution) or the spatial resolution at which it is collected without imposing extra load on the operator.
+
+![SUAVE](https://github.com/shafiqabedin/suave-dynamic/blob/master/photo-mar-12-12-36-02-pm.jpg)
